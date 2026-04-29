@@ -9,7 +9,7 @@ const TERMINAL_NAME = "vcoder"
 const SESSION_DIR_NAME = ".vcoder-session"
 const HEALTH_PATH = "/global/health"
 const HEALTH_TIMEOUT_MS = 1500
-const SPAWN_READY_TIMEOUT_MS = 30_000
+const SPAWN_READY_TIMEOUT_MS = 90_000
 const SPAWN_POLL_INTERVAL_MS = 250
 const DEFAULT_PORT = 4096
 
@@ -139,7 +139,7 @@ export function activate(context: vscode.ExtensionContext) {
     updateStatusBar("connecting")
     try {
       sharedServer = await startServer(log)
-      await waitForReady(sharedServer.port, log)
+      await waitForReady(sharedServer.port, log, sharedServer.proc)
       updateStatusBar("connected", sharedServer.port)
       vscode.window.showInformationMessage(`vcoder: connected to server on port ${sharedServer.port}`)
     } catch (err) {
@@ -404,19 +404,30 @@ async function healthCheck(port: number): Promise<boolean> {
   }
 }
 
-async function waitForReady(port: number, log: vscode.OutputChannel): Promise<void> {
+async function waitForReady(port: number, log: vscode.OutputChannel, child?: ChildProcess): Promise<void> {
   const deadline = Date.now() + SPAWN_READY_TIMEOUT_MS
   while (Date.now() < deadline) {
+    if (child && child.exitCode !== null) {
+      throw new Error(
+        `server process exited with code ${child.exitCode} before becoming ready — check the "vcoder" output panel for stack traces`,
+      )
+    }
     if (await healthCheck(port)) {
       log.appendLine(`[vcoder] server ready on port ${port}`)
       return
     }
     await sleep(SPAWN_POLL_INTERVAL_MS)
   }
-  throw new Error(`server did not become ready on port ${port} within ${SPAWN_READY_TIMEOUT_MS}ms`)
+  throw new Error(
+    `server did not become ready on port ${port} within ${SPAWN_READY_TIMEOUT_MS}ms — check the "vcoder" output panel for server logs`,
+  )
 }
 
 async function startServer(log: vscode.OutputChannel): Promise<{ port: number; proc: ChildProcess }> {
+  const cfg = vscode.workspace.getConfiguration("vcoder")
+  const configuredPort = cfg.get<number>("port") || 0
+  const noProxy = cfg.get<string>("noProxy")?.trim() || "localhost,127.0.0.1,::1"
+
   // If a server is already up on the saved port, adopt it without spawning.
   const saved = await readSavedPort()
   if (saved !== undefined && (await healthCheck(saved))) {
@@ -425,22 +436,32 @@ async function startServer(log: vscode.OutputChannel): Promise<{ port: number; p
     return sharedServer as { port: number; proc: ChildProcess }
   }
 
-  // Prefer saved port if free; otherwise pick an ephemeral one.
-  const port =
-    saved !== undefined && !(await isPortInUse(saved)) ? saved : DEFAULT_PORT && !(await isPortInUse(DEFAULT_PORT))
-      ? DEFAULT_PORT
-      : await pickFreePort()
+  // Pick a port: explicit user setting > saved port > DEFAULT_PORT > ephemeral.
+  const candidates = [configuredPort, saved ?? 0, DEFAULT_PORT].filter((p): p is number => p > 0)
+  let port = 0
+  for (const c of candidates) {
+    if (!(await isPortInUse(c))) {
+      port = c
+      break
+    }
+  }
+  if (port === 0) port = await pickFreePort()
 
   const serverEntry = path.join(vcoderHomeServerDir(), "dist", "index.js")
   if (!fs.existsSync(serverEntry)) {
     throw new Error(`server entry not found at ${serverEntry}; install may have failed`)
   }
 
-  log.appendLine(`[vcoder] spawning shared server: node ${serverEntry} --port ${port}`)
+  log.appendLine(`[vcoder] spawning shared server: node ${serverEntry} --port ${port} (NO_PROXY=${noProxy})`)
 
   const child = spawn(process.execPath, [serverEntry, "--port", String(port)], {
     cwd: vcoderHomeDir(),
-    env: { ...process.env, VCODER_CALLER: "vscode" },
+    env: {
+      ...process.env,
+      VCODER_CALLER: "vscode",
+      NO_PROXY: noProxy,
+      no_proxy: noProxy,
+    },
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
     detached: false,

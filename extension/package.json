@@ -2,7 +2,7 @@
   "name": "vcoder",
   "displayName": "VDS-Coder Agent",
   "description": "VDS-Coder Agent for VS Code",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "private": true,
   "publisher": "vcoder",
   "license": "MIT",
@@ -59,7 +59,20 @@
     ],
     "configuration": {
       "title": "vcoder",
-      "properties": {}
+      "properties": {
+        "vcoder.port": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "maximum": 65535,
+          "description": "Preferred port for the vcoder server. 0 = auto (try 4096, fall back to a free port). Restart the server (vcoder: Restart Server) after changing."
+        },
+        "vcoder.noProxy": {
+          "type": "string",
+          "default": "localhost,127.0.0.1,::1",
+          "description": "Comma-separated list of hosts that bypass any HTTP_PROXY/HTTPS_PROXY when the spawned vcoder server makes outbound calls. Used as the NO_PROXY env var. Restart the server after changing."
+        }
+      }
     },
     "menus": {
       "editor/title": [
