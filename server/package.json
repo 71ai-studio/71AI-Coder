@@ -1,0 +1,26 @@
+{
+  "name": "vcoder-server",
+  "version": "0.1.0",
+  "description": "vcoder runtime entry — wraps headless opencode server",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "vcoder": "dist/index.js"
+  },
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "node build.cjs",
+    "watch": "node build.cjs --watch",
+    "check-types": "tsc --noEmit",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "opencode": "*"
+  },
+  "devDependencies": {
+    "@tsconfig/node22": "22.0.2",
+    "@types/node": "22.13.9",
+    "esbuild": "^0.25.3",
+    "typescript": "5.8.2"
+  }
+}

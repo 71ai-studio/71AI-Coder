@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "vcoder-root",
+  "description": "vcoder workspace root (Node.js port of opencode for VS Code extension)",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:server": "npm run build --workspace=server",
+    "build:extension": "npm run package --workspace=extension",
+    "build": "npm run build:server && npm run build:extension",
+    "dev:server": "npm run watch --workspace=server",
+    "typecheck": "tsc -b"
+  },
+  "workspaces": [
+    "packages/*",
+    "packages/sdk/js",
+    "extension",
+    "server"
+  ],
+  "devDependencies": {
+    "@tsconfig/node22": "22.0.2",
+    "@types/node": "22.13.9",
+    "esbuild": "^0.25.3",
+    "typescript": "5.8.2"
+  },
+  "overrides": {
+    "drizzle-orm": "1.0.0-beta.19-d95b7a4",
+    "@types/node": "22.13.9"
+  }
+}

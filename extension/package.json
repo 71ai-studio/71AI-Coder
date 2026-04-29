@@ -1,0 +1,109 @@
+{
+  "name": "vcoder",
+  "displayName": "vcoder",
+  "description": "vcoder for VS Code — Node-port of vcoder bundled inside the extension",
+  "version": "0.1.0",
+  "private": true,
+  "publisher": "vcoder",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.94.0",
+    "node": ">=22"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "files": [
+    "dist",
+    "server",
+    "images"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "vcoder.openTerminal",
+        "title": "Open vcoder",
+        "icon": {
+          "light": "images/button-dark.svg",
+          "dark": "images/button-light.svg"
+        }
+      },
+      {
+        "command": "vcoder.openNewTerminal",
+        "title": "Open vcoder in new tab",
+        "icon": {
+          "light": "images/button-dark.svg",
+          "dark": "images/button-light.svg"
+        }
+      },
+      {
+        "command": "vcoder.addFilepathToTerminal",
+        "title": "Add Filepath to Terminal"
+      },
+      {
+        "command": "vcoder.restartServer",
+        "title": "vcoder: Restart Server"
+      }
+    ],
+    "configuration": {
+      "title": "vcoder",
+      "properties": {}
+    },
+    "menus": {
+      "editor/title": [
+        {
+          "command": "vcoder.openNewTerminal",
+          "group": "navigation"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "vcoder.openTerminal",
+        "title": "Run vcoder",
+        "key": "ctrl+escape",
+        "mac": "cmd+escape",
+        "win": "ctrl+escape",
+        "linux": "ctrl+escape"
+      },
+      {
+        "command": "vcoder.openNewTerminal",
+        "title": "Run vcoder",
+        "key": "ctrl+shift+escape",
+        "mac": "cmd+shift+escape",
+        "win": "ctrl+shift+escape",
+        "linux": "ctrl+shift+escape"
+      },
+      {
+        "command": "vcoder.addFilepathToTerminal",
+        "title": "vcoder: Insert At-Mentioned",
+        "key": "ctrl+alt+k",
+        "mac": "cmd+alt+k",
+        "win": "ctrl+alt+K",
+        "linux": "ctrl+alt+K"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "build:server": "node build-server.js",
+    "compile": "npm run check-types && node esbuild.js",
+    "watch:esbuild": "node esbuild.js --watch",
+    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "package": "npm run check-types && npm run build:server && node esbuild.js --production",
+    "vsix": "npm run package && vsce package --no-dependencies",
+    "check-types": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@tsconfig/node22": "22.0.2",
+    "@types/node": "22.13.9",
+    "@types/vscode": "^1.94.0",
+    "@vscode/vsce": "3.7.0",
+    "esbuild": "^0.25.3",
+    "typescript": "5.8.2"
+  }
+}

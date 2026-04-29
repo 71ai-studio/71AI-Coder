@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "version": "1.14.28",
+  "name": "@opencode-ai/core",
+  "type": "module",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "imports": {},
+  "devDependencies": {
+    "@tsconfig/node22": "22.0.2",
+    "@types/cross-spawn": "6.0.6",
+    "@types/node": "22.13.9",
+    "@types/npm-package-arg": "6.1.4",
+    "@types/npmcli__arborist": "6.3.3",
+    "@types/semver": "7.7.1"
+  },
+  "dependencies": {
+    "@effect/opentelemetry": "4.0.0-beta.57",
+    "@effect/platform-node": "4.0.0-beta.57",
+    "@npmcli/arborist": "9.4.0",
+    "@npmcli/config": "10.8.1",
+    "@opentelemetry/api": "1.9.0",
+    "@opentelemetry/context-async-hooks": "2.6.1",
+    "@opentelemetry/exporter-trace-otlp-http": "0.214.0",
+    "@opentelemetry/sdk-trace-base": "2.6.1",
+    "effect": "4.0.0-beta.57",
+    "cross-spawn": "7.0.6",
+    "glob": "13.0.5",
+    "mime-types": "3.0.2",
+    "minimatch": "10.2.5",
+    "npm-package-arg": "13.0.2",
+    "semver": "^7.6.3",
+    "xdg-basedir": "5.1.0",
+    "zod": "4.1.8"
+  },
+  "overrides": {
+    "drizzle-orm": "1.0.0-beta.19-d95b7a4"
+  }
+}

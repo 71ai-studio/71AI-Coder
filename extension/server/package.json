@@ -1,0 +1,11 @@
+{
+  "name": "vcoder-server-bundle",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "vcoder": "dist/index.js"
+  },
+  "description": "Bundled vcoder server (shipped inside the VS Code .vsix)"
+}

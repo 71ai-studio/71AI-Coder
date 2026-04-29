@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "@opencode-ai/plugin",
+  "version": "1.14.28",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./tool": "./src/tool.ts"
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@opencode-ai/sdk": "*",
+    "effect": "4.0.0-beta.57",
+    "zod": "4.1.8"
+  },
+  "devDependencies": {
+    "@tsconfig/node22": "22.0.2",
+    "@types/node": "22.13.9",
+    "typescript": "5.8.2"
+  }
+}
