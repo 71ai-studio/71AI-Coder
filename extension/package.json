@@ -2,7 +2,7 @@
   "name": "vcoder",
   "displayName": "VDS-Coder Agent",
   "description": "VDS-Coder Agent for VS Code",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "private": true,
   "publisher": "vcoder",
   "license": "MIT",
@@ -71,6 +71,11 @@
           "type": "string",
           "default": "localhost,127.0.0.1,::1",
           "description": "Comma-separated list of hosts that bypass any HTTP_PROXY/HTTPS_PROXY when the spawned vcoder server makes outbound calls. Used as the NO_PROXY env var. Restart the server after changing."
+        },
+        "vcoder.nodePath": {
+          "type": "string",
+          "default": "",
+          "description": "Absolute path to the Node.js executable used to run the bundled server. Empty = auto-detect (look up `node` on PATH; fall back to VS Code's Electron). Set this if you hit `NODE_MODULE_VERSION` ABI mismatch errors with the bundled native modules (e.g. better-sqlite3). Use a real Node 22.x install."
         }
       }
     },

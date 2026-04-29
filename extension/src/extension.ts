@@ -423,6 +423,33 @@ async function waitForReady(port: number, log: vscode.OutputChannel, child?: Chi
   )
 }
 
+async function findNodeBinary(log: vscode.OutputChannel): Promise<string> {
+  const cfg = vscode.workspace.getConfiguration("vcoder")
+  const configured = cfg.get<string>("nodePath")?.trim()
+  if (configured) {
+    if (fs.existsSync(configured)) {
+      log.appendLine(`[vcoder] using configured node: ${configured}`)
+      return configured
+    }
+    log.appendLine(`[vcoder] configured nodePath does not exist, falling back: ${configured}`)
+  }
+  // Search PATH for node — better-sqlite3 prebuilds match real Node ABI, not Electron's.
+  const pathSep = process.platform === "win32" ? ";" : ":"
+  const exeNames = process.platform === "win32" ? ["node.exe", "node.cmd"] : ["node"]
+  for (const dir of (process.env.PATH ?? "").split(pathSep)) {
+    if (!dir) continue
+    for (const exe of exeNames) {
+      const full = path.join(dir, exe)
+      if (fs.existsSync(full)) {
+        log.appendLine(`[vcoder] using node from PATH: ${full}`)
+        return full
+      }
+    }
+  }
+  log.appendLine(`[vcoder] no node on PATH, falling back to ${process.execPath} with ELECTRON_RUN_AS_NODE=1`)
+  return process.execPath
+}
+
 async function startServer(log: vscode.OutputChannel): Promise<{ port: number; proc: ChildProcess }> {
   const cfg = vscode.workspace.getConfiguration("vcoder")
   const configuredPort = cfg.get<number>("port") || 0
@@ -452,15 +479,18 @@ async function startServer(log: vscode.OutputChannel): Promise<{ port: number; p
     throw new Error(`server entry not found at ${serverEntry}; install may have failed`)
   }
 
-  log.appendLine(`[vcoder] spawning shared server: node ${serverEntry} --port ${port} (NO_PROXY=${noProxy})`)
+  const nodeBin = await findNodeBinary(log)
+  const isElectron = nodeBin === process.execPath
+  log.appendLine(`[vcoder] spawning shared server: ${nodeBin} ${serverEntry} --port ${port} (NO_PROXY=${noProxy})`)
 
-  const child = spawn(process.execPath, [serverEntry, "--port", String(port)], {
+  const child = spawn(nodeBin, [serverEntry, "--port", String(port)], {
     cwd: vcoderHomeDir(),
     env: {
       ...process.env,
       VCODER_CALLER: "vscode",
       NO_PROXY: noProxy,
       no_proxy: noProxy,
+      ...(isElectron ? { ELECTRON_RUN_AS_NODE: "1" } : {}),
     },
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
