@@ -16,6 +16,16 @@ const DEFAULT_CSP =
 const csp = (hash = "") =>
   `default-src 'self'; script-src 'self' 'wasm-unsafe-eval'${hash ? ` 'sha256-${hash}'` : ""}; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; media-src 'self' data:; connect-src 'self' data:`
 
+let colorScheme: "dark" | "light" = "dark"
+
+export function setColorScheme(scheme: "dark" | "light") {
+  colorScheme = scheme
+}
+
+function injectColorScheme(html: string): string {
+  return html.replace(/(<head\b[^>]*>)/i, `$1\n<meta name="color-scheme" content="${colorScheme}">`)
+}
+
 export const UIRoutes = (): Hono =>
   new Hono().all("/*", async (c) => {
     const embeddedWebUI = await embeddedUIPromise
@@ -30,6 +40,8 @@ export const UIRoutes = (): Hono =>
         c.header("Content-Type", mime)
         if (mime.startsWith("text/html")) {
           c.header("Content-Security-Policy", DEFAULT_CSP)
+          const html = injectColorScheme(await fs.readFile(match, "utf8"))
+          return c.body(new TextEncoder().encode(html))
         }
         return c.body(new Uint8Array(await fs.readFile(match)))
       } else {
@@ -43,13 +55,16 @@ export const UIRoutes = (): Hono =>
           host: "app.opencode.ai",
         },
       })
-      const match = response.headers.get("content-type")?.includes("text/html")
-        ? (await response.clone().text()).match(
-            /<script\b(?![^>]*\bsrc\s*=)[^>]*\bid=(['"])oc-theme-preload-script\1[^>]*>([\s\S]*?)<\/script>/i,
-          )
-        : undefined
-      const hash = match ? createHash("sha256").update(match[2]).digest("base64") : ""
-      response.headers.set("Content-Security-Policy", csp(hash))
+      if (response.headers.get("content-type")?.includes("text/html")) {
+        const html = await response.clone().text()
+        const scriptMatch = html.match(
+          /<script\b(?![^>]*\bsrc\s*=)[^>]*\bid=(['"])oc-theme-preload-script\1[^>]*>([\s\S]*?)<\/script>/i,
+        )
+        const hash = scriptMatch ? createHash("sha256").update(scriptMatch[2]).digest("base64") : ""
+        const newHeaders = new Headers(response.headers)
+        newHeaders.set("Content-Security-Policy", csp(hash))
+        return new Response(injectColorScheme(html), { status: response.status, headers: newHeaders })
+      }
       return response
     }
   })

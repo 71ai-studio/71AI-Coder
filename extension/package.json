@@ -1,7 +1,7 @@
 {
   "name": "vcoder",
-  "displayName": "vcoder",
-  "description": "vcoder for VS Code — Node-port of vcoder bundled inside the extension",
+  "displayName": "VDS-Coder Agent",
+  "description": "VDS-Coder Agent for VS Code",
   "version": "0.1.0",
   "private": true,
   "publisher": "vcoder",
@@ -25,8 +25,12 @@
   "contributes": {
     "commands": [
       {
+        "command": "vcoder.connect",
+        "title": "vcoder: Connect to Server"
+      },
+      {
         "command": "vcoder.openTerminal",
-        "title": "Open vcoder",
+        "title": "VDS-Coder Agent: Open",
         "icon": {
           "light": "images/button-dark.svg",
           "dark": "images/button-light.svg"
@@ -34,7 +38,7 @@
       },
       {
         "command": "vcoder.openNewTerminal",
-        "title": "Open vcoder in new tab",
+        "title": "VDS-Coder Agent: Open in New Tab",
         "icon": {
           "light": "images/button-dark.svg",
           "dark": "images/button-light.svg"
@@ -43,6 +47,10 @@
       {
         "command": "vcoder.addFilepathToTerminal",
         "title": "Add Filepath to Terminal"
+      },
+      {
+        "command": "vcoder.openTUI",
+        "title": "VDS-Coder Agent: Open Terminal (TUI)"
       },
       {
         "command": "vcoder.restartServer",

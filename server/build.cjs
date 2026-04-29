@@ -55,9 +55,13 @@ const externals = [
   "jsonc-parser",
   // Native module — must be loaded from node_modules so node-gyp prebuilt binary is found
   "better-sqlite3",
-  // Optional Redis client (effect platform-node optional dep, not installed)
-  "ioredis",
+  // ioredis and quansync are pure-JS — bundled in so Node doesn't crash at startup
 ]
+
+// Write a minimal ioredis stub so esbuild can bundle it instead of leaving a broken import.
+const ioredisStub = path.join(__dirname, "dist", "_ioredis_stub.js")
+fs.mkdirSync(path.dirname(ioredisStub), { recursive: true })
+fs.writeFileSync(ioredisStub, "export default {}; export class Redis {} export class Cluster {}\n")
 
 const options = {
   entryPoints: ["src/index.ts"],
@@ -90,6 +94,9 @@ const options = {
   // opencode references migrations dir relative to import.meta.dirname; mark as
   // not-side-effect-free so esbuild keeps the runtime path lookup intact.
   resolveExtensions: [".ts", ".tsx", ".mjs", ".js", ".cjs", ".json"],
+  alias: {
+    "ioredis": ioredisStub,
+  },
   define: {
     "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV || "production"),
     OPENCODE_MIGRATIONS: JSON.stringify(migrations),

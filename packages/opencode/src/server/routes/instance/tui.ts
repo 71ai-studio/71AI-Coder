@@ -11,6 +11,7 @@ import { AsyncQueue } from "@/util/queue"
 import { errors } from "../../error"
 import { lazy } from "@/util/lazy"
 import { runRequest } from "./trace"
+import { setColorScheme } from "../ui"
 
 export const TuiRequest = z.object({
   path: z.string(),
@@ -89,6 +90,26 @@ const TuiControlRoutes = new Hono()
 
 export const TuiRoutes = lazy(() =>
   new Hono()
+    .post(
+      "/set-theme",
+      describeRoute({
+        summary: "Set color scheme",
+        description: "Set the UI color scheme (dark or light) for the next page load",
+        operationId: "tui.setTheme",
+        responses: {
+          200: {
+            description: "Theme set successfully",
+            content: { "application/json": { schema: resolver(z.boolean()) } },
+          },
+        },
+      }),
+      validator("json", z.object({ theme: z.enum(["dark", "light"]) })),
+      async (c) => {
+        const { theme } = c.req.valid("json")
+        setColorScheme(theme)
+        return c.json(true)
+      },
+    )
     .post(
       "/append-prompt",
       describeRoute({

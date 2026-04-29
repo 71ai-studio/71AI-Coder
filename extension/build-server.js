@@ -61,9 +61,13 @@ async function copyDir(src, dest) {
     if (entry.isDirectory()) await copyDir(s, d)
     else if (entry.isSymbolicLink()) {
       const link = await fsp.readlink(s)
-      await fsp.symlink(link, d)
+      await fsp.symlink(link, d).catch(() => {})
     } else {
-      await fsp.copyFile(s, d)
+      await fsp.copyFile(s, d).catch((e) => {
+        // .node binaries may be locked by VS Code — skip, the old copy is still valid
+        if (e.code !== "EBUSY" && e.code !== "EPERM") throw e
+        console.warn(`[build-server] warning: skipped locked file ${d}`)
+      })
     }
   }
   return true
@@ -94,9 +98,29 @@ async function buildServerBundle() {
   if (result.status !== 0) throw new Error(`server build failed (exit ${result.status})`)
 }
 
+async function rmrfSafe(p) {
+  try {
+    await fsp.rm(p, { recursive: true, force: true })
+  } catch (e) {
+    if (e.code !== "EPERM" && e.code !== "EBUSY") throw e
+    // .node file locked by VS Code — delete all non-.node files, leave locked ones
+    console.warn(`[build-server] warning: could not fully remove ${p} (${e.code}), doing partial clean`)
+    try {
+      for (const entry of await fsp.readdir(p, { withFileTypes: true, recursive: true })) {
+        const full = path.join(entry.parentPath ?? entry.path ?? p, entry.name)
+        if (entry.isFile() && !full.endsWith(".node")) {
+          await fsp.unlink(full).catch(() => {})
+        } else if (entry.isDirectory()) {
+          await fsp.rmdir(full).catch(() => {})
+        }
+      }
+    } catch {}
+  }
+}
+
 async function stageServer() {
   console.log(`[build-server] staging into ${targetDir}`)
-  await rmrf(targetDir)
+  await rmrfSafe(targetDir)
   await fsp.mkdir(path.join(targetDir, "dist"), { recursive: true })
 
   // 1. Copy bundle.
