@@ -454,6 +454,11 @@ async function startServer(log: vscode.OutputChannel): Promise<{ port: number; p
   const cfg = vscode.workspace.getConfiguration("vcoder")
   const configuredPort = cfg.get<number>("port") || 0
   const noProxy = cfg.get<string>("noProxy")?.trim() || "localhost,127.0.0.1,::1"
+  const extraCaCerts = cfg.get<string>("extraCaCerts")?.trim()
+  const insecureTls = cfg.get<boolean>("insecureTls") === true
+  if (extraCaCerts && !fs.existsSync(extraCaCerts)) {
+    log.appendLine(`[vcoder] warning: extraCaCerts file not found: ${extraCaCerts}`)
+  }
 
   // If a server is already up on the saved port, adopt it without spawning.
   const saved = await readSavedPort()
@@ -481,7 +486,12 @@ async function startServer(log: vscode.OutputChannel): Promise<{ port: number; p
 
   const nodeBin = await findNodeBinary(log)
   const isElectron = nodeBin === process.execPath
-  log.appendLine(`[vcoder] spawning shared server: ${nodeBin} ${serverEntry} --port ${port} (NO_PROXY=${noProxy})`)
+  const tlsNote = insecureTls
+    ? " TLS=insecure"
+    : extraCaCerts && fs.existsSync(extraCaCerts)
+      ? ` extraCaCerts=${extraCaCerts}`
+      : ""
+  log.appendLine(`[vcoder] spawning shared server: ${nodeBin} ${serverEntry} --port ${port} (NO_PROXY=${noProxy}${tlsNote})`)
 
   const child = spawn(nodeBin, [serverEntry, "--port", String(port)], {
     cwd: vcoderHomeDir(),
@@ -491,6 +501,8 @@ async function startServer(log: vscode.OutputChannel): Promise<{ port: number; p
       NO_PROXY: noProxy,
       no_proxy: noProxy,
       ...(isElectron ? { ELECTRON_RUN_AS_NODE: "1" } : {}),
+      ...(extraCaCerts && fs.existsSync(extraCaCerts) ? { NODE_EXTRA_CA_CERTS: extraCaCerts } : {}),
+      ...(insecureTls ? { NODE_TLS_REJECT_UNAUTHORIZED: "0" } : {}),
     },
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
@@ -914,15 +926,33 @@ async function addOllama(){
   ollamaAdd.disabled=true;
   try{
     const cfg=await(await fetch(API+'/config')).json();
-    const providers=cfg.providers??{};
-    const ol=providers.ollama??{name:'Ollama',api,models:[]};
-    ol.api=api;
-    const models=ol.models??[];
-    if(!models.find(m=>m.id===name))models.push({id:name,name});
-    providers.ollama={...ol,models};
-    await fetch(API+'/config',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({providers})});
-    ollamaIn.value='';await loadModels();
-  }catch(e){console.error(e);}finally{ollamaAdd.disabled=false;}
+    const provider=cfg.provider??{};
+    const prev=provider.ollama??{};
+    const models={...(prev.models??{})};
+    models[name]={...(models[name]??{}),name};
+    provider.ollama={
+      ...prev,
+      name:prev.name||'Ollama',
+      npm:'@ai-sdk/openai-compatible',
+      api,
+      options:{...(prev.options??{}),baseURL:api},
+      models,
+    };
+    const r=await fetch(API+'/config',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider})});
+    if(!r.ok){const t=await r.text();throw new Error('PATCH /config '+r.status+': '+t);}
+    ollamaIn.value='';await loadModels();await loadOllamaConfig();
+  }catch(e){console.error('addOllama failed',e);addMsg('ai err',esc('Add model failed: '+e.message));}finally{ollamaAdd.disabled=false;}
+}
+
+async function loadOllamaConfig(){
+  try{
+    const cfg=await(await fetch(API+'/config')).json();
+    const ol=cfg.provider?.ollama;
+    if(ol){
+      const url=ol.options?.baseURL||ol.api;
+      if(url)ollamaHost.value=url;
+    }
+  }catch{}
 }
 
 // Dropdowns
@@ -958,7 +988,7 @@ window.addEventListener('message',e=>{
 // + button: ask the extension to open a file/folder picker
 $('ctx-btn').onclick=()=>{vscodeApi?.postMessage({type:'pickContext'});};
 
-connectSSE();init();
+connectSSE();init();loadOllamaConfig();
 </script>
 </body>
 </html>`

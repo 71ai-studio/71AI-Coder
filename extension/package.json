@@ -2,7 +2,7 @@
   "name": "vcoder",
   "displayName": "VDS-Coder Agent",
   "description": "VDS-Coder Agent for VS Code",
-  "version": "0.1.5",
+  "version": "0.1.7",
   "private": true,
   "publisher": "vcoder",
   "license": "MIT",
@@ -76,6 +76,16 @@
           "type": "string",
           "default": "",
           "description": "Absolute path to the Node.js executable used to run the bundled server. Empty = auto-detect (look up `node` on PATH; fall back to VS Code's Electron). Set this if you hit `NODE_MODULE_VERSION` ABI mismatch errors with the bundled native modules (e.g. better-sqlite3). Use a real Node 22.x install."
+        },
+        "vcoder.extraCaCerts": {
+          "type": "string",
+          "default": "",
+          "description": "Absolute path to a PEM/CRT file containing extra CA certificates to trust when the spawned vcoder server makes outbound HTTPS calls (e.g. corporate root CA for SSL inspection). Sets NODE_EXTRA_CA_CERTS env on the server process. Restart the server after changing."
+        },
+        "vcoder.insecureTls": {
+          "type": "boolean",
+          "default": false,
+          "description": "Disable TLS certificate verification for outbound HTTPS calls from the spawned vcoder server (sets NODE_TLS_REJECT_UNAUTHORIZED=0). Only enable on trusted internal networks where you can't install the corporate CA — leaks would not be detected. Restart the server after changing."
         }
       }
     },
