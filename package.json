@@ -21,6 +21,7 @@
     "@tsconfig/node22": "22.0.2",
     "@types/node": "22.13.9",
     "esbuild": "^0.25.3",
+    "quansync": "^1.0.0",
     "typescript": "5.8.2"
   },
   "overrides": {

@@ -2,7 +2,7 @@
   "name": "vcoder",
   "displayName": "VDS-Coder Agent",
   "description": "VDS-Coder Agent for VS Code",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "private": true,
   "publisher": "vcoder",
   "license": "MIT",
@@ -103,7 +103,7 @@
     "watch:esbuild": "node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
     "package": "npm run check-types && npm run build:server && node esbuild.js --production",
-    "vsix": "npm run package && vsce package --no-dependencies",
+    "vsix": "npm run package && npm version patch --no-git-tag-version && vsce package --no-dependencies",
     "check-types": "tsc --noEmit"
   },
   "devDependencies": {

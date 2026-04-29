@@ -250,9 +250,10 @@ async function ensureServerInstalled(context: vscode.ExtensionContext, log: vsco
 
   const targetDir = vcoderHomeServerDir()
   const stampPath = path.join(targetDir, ".version")
+  const targetEntry = path.join(targetDir, "dist", "index.js")
   const expectedStamp = `${context.extension.packageJSON.version ?? "dev"}|${context.extension.packageJSON.name ?? "vcoder"}`
 
-  if (fs.existsSync(stampPath)) {
+  if (fs.existsSync(stampPath) && fs.existsSync(targetEntry)) {
     try {
       const actual = await fsp.readFile(stampPath, "utf8")
       if (actual === expectedStamp) {
@@ -263,9 +264,18 @@ async function ensureServerInstalled(context: vscode.ExtensionContext, log: vsco
   }
 
   log.appendLine(`[vcoder] installing server to ${targetDir} (version ${expectedStamp})`)
-  await fsp.rm(targetDir, { recursive: true, force: true })
+  // Best-effort wipe — leave locked .node files alone, copyDir will overwrite the rest
+  try {
+    await fsp.rm(targetDir, { recursive: true, force: true })
+  } catch (err: any) {
+    if (err?.code !== "EPERM" && err?.code !== "EBUSY") throw err
+    log.appendLine(`[vcoder] could not fully remove old server (${err.code}); will overwrite in place`)
+  }
   await fsp.mkdir(targetDir, { recursive: true })
-  await copyDir(sourceDir, targetDir)
+  await copyDir(sourceDir, targetDir, log)
+  if (!fs.existsSync(targetEntry)) {
+    throw new Error(`server bundle copy did not produce ${targetEntry}`)
+  }
   await fsp.writeFile(stampPath, expectedStamp, "utf8")
   log.appendLine("[vcoder] server install complete")
 }
@@ -282,14 +292,31 @@ function currentWorkspace(): string | undefined {
   return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
 }
 
-async function copyDir(src: string, dest: string): Promise<void> {
+async function copyDir(src: string, dest: string, log?: vscode.OutputChannel): Promise<void> {
   await fsp.mkdir(dest, { recursive: true })
   for (const entry of await fsp.readdir(src, { withFileTypes: true })) {
     const s = path.join(src, entry.name)
     const d = path.join(dest, entry.name)
-    if (entry.isDirectory()) await copyDir(s, d)
-    else if (entry.isSymbolicLink()) await fsp.symlink(await fsp.readlink(s), d)
-    else await fsp.copyFile(s, d)
+    if (entry.isDirectory()) {
+      await copyDir(s, d, log)
+    } else if (entry.isSymbolicLink()) {
+      try {
+        await fsp.symlink(await fsp.readlink(s), d)
+      } catch (err: any) {
+        if (err?.code !== "EEXIST" && err?.code !== "EPERM") throw err
+      }
+    } else {
+      try {
+        await fsp.copyFile(s, d)
+      } catch (err: any) {
+        // Native .node files may be locked while VS Code holds a previous copy mapped — leave the existing one in place.
+        if (err?.code === "EBUSY" || err?.code === "EPERM") {
+          log?.appendLine(`[vcoder] skipping locked file ${d} (${err.code})`)
+          continue
+        }
+        throw err
+      }
+    }
   }
 }
 
